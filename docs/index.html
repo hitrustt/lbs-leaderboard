@@ -81,6 +81,9 @@
 
     .cloud-a { top: 72px; left: 8%; transform: scale(0.85); }
     .cloud-b { top: 138px; right: 12%; transform: scale(1.05); }
+    .cloud-c { top: 210px; left: 22%; transform: scale(0.68); opacity: 0.72; }
+    .cloud-d { top: 92px; right: 28%; transform: scale(0.78); opacity: 0.7; }
+    .cloud-e { top: 286px; right: 6%; transform: scale(0.92); opacity: 0.66; }
 
     .leaf-float {
       font-size: 42px;
@@ -91,11 +94,15 @@
     .leaf-a { top: 150px; left: 7%; transform: rotate(-14deg); }
     .leaf-b { top: 320px; right: 8%; transform: rotate(18deg); }
     .leaf-c { bottom: 150px; left: 11%; transform: rotate(9deg); }
+    .leaf-d { top: 118px; right: 22%; transform: rotate(-8deg) scale(0.78); opacity: 0.11; }
+    .leaf-e { top: 408px; left: 18%; transform: rotate(16deg) scale(0.72); opacity: 0.1; }
+    .leaf-f { bottom: 210px; right: 16%; transform: rotate(-18deg) scale(0.82); opacity: 0.12; }
+    .leaf-g { bottom: 92px; right: 34%; transform: rotate(7deg) scale(0.66); opacity: 0.09; }
 
     .wrapper {
       position: relative;
       z-index: 1;
-      max-width: 1080px;
+      max-width: 980px;
       margin: 0 auto;
       padding: 36px 18px 72px;
     }
@@ -286,7 +293,7 @@
 
     .table-head {
       display: grid;
-      grid-template-columns: 74px 1.35fr 190px 140px;
+      grid-template-columns: 68px minmax(0, 0.95fr) 160px 104px;
       gap: 10px;
       padding: 18px 20px 16px;
       background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0));
@@ -308,7 +315,7 @@
     .row,
     .skeleton-row {
       display: grid;
-      grid-template-columns: 74px 1.35fr 190px 140px;
+      grid-template-columns: 68px minmax(0, 0.95fr) 160px 104px;
       gap: 10px;
       align-items: center;
       padding: 16px 20px;
@@ -554,9 +561,16 @@
 <body>
   <div class="cloud cloud-a"></div>
   <div class="cloud cloud-b"></div>
+  <div class="cloud cloud-c"></div>
+  <div class="cloud cloud-d"></div>
+  <div class="cloud cloud-e"></div>
   <div class="leaf-float leaf-a">🍃</div>
   <div class="leaf-float leaf-b">🍂</div>
   <div class="leaf-float leaf-c">🍃</div>
+  <div class="leaf-float leaf-d">🍂</div>
+  <div class="leaf-float leaf-e">🍃</div>
+  <div class="leaf-float leaf-f">🍂</div>
+  <div class="leaf-float leaf-g">🍃</div>
 
   <div class="wrapper">
     <header class="hero">
