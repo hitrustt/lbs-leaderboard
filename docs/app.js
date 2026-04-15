@@ -1,48 +1,50 @@
-/**
- * app.js
- * ─────────────────────────────────────────────────────────────
- * Fetches leaderboard data from Supabase and renders the table.
- * Requires: config.js, eternitynum.js
- */
+import React, { useEffect, useMemo, useRef, useState } from "https://esm.sh/react@18.3.1";
+import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
+import htm from "https://esm.sh/htm@3.1.1";
 
-'use strict';
-
-// ─── STATE ────────────────────────────────────────────────────
-let sortBy   = 'leaves';  // 'leaves' | 'level'
-let allData  = [];
-let refreshTimer = null;
+const html = htm.bind(React.createElement);
 const avatarCache = new Map();
 
-// ─── SUPABASE FETCH ───────────────────────────────────────────
-async function fetchLeaderboard() {
-  const { SUPABASE_URL, SUPABASE_ANON_KEY, LIMIT } = CONFIG;
+function rankClass(index) {
+  if (index === 0) return "rank-badge rank-1";
+  if (index === 1) return "rank-badge rank-2";
+  if (index === 2) return "rank-badge rank-3";
+  return "rank-badge rank-other";
+}
 
-  if (!SUPABASE_URL || SUPABASE_URL === 'YOUR_SUPABASE_URL_HERE') {
-    throw new Error('CONFIG not set — please edit config.js with your Supabase credentials.');
+function rowClass(index) {
+  if (index === 0) return "row row-1";
+  if (index === 1) return "row row-2";
+  if (index === 2) return "row row-3";
+  return "row";
+}
+
+async function fetchLeaderboard(sortBy) {
+  const { SUPABASE_URL, SUPABASE_ANON_KEY, LIMIT } = window.CONFIG || {};
+
+  if (!SUPABASE_URL || SUPABASE_URL === "YOUR_SUPABASE_URL_HERE") {
+    throw new Error("CONFIG not set — please edit config.js with your Supabase credentials.");
   }
 
-  // We fetch enough rows sorted by the chosen column.
-  // The table is "leaderboard" with columns: username, leaves, level, updated_at
-  const col   = sortBy === 'level' ? 'level' : 'leaves';
-  const url   = `${SUPABASE_URL}/rest/v1/leaderboard`
-              + `?select=userid,username,avatar_url,leaves,level,updated_at`
-              + `&order=${col}.desc`
-              + `&limit=${LIMIT}`;
+  const column = sortBy === "level" ? "level" : "leaves";
+  const url = `${SUPABASE_URL}/rest/v1/leaderboard`
+    + `?select=userid,username,avatar_url,leaves,level,updated_at`
+    + `&order=${column}.desc`
+    + `&limit=${LIMIT}`;
 
-  const res = await fetch(url, {
+  const response = await fetch(url, {
     headers: {
-      'apikey':        SUPABASE_ANON_KEY,
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-    }
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
   });
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Supabase error ${res.status}: ${err}`);
+  if (!response.ok) {
+    throw new Error(`Supabase error ${response.status}: ${await response.text()}`);
   }
 
-  const data = await res.json();
-  return data.map((row) => ({
+  const rows = await response.json();
+  return rows.map((row) => ({
     ...row,
     userid: row.userid != null ? Number(row.userid) : null,
     avatar_url: row.avatar_url || null,
@@ -61,17 +63,17 @@ async function populateAvatarUrls(rows) {
       + "&size=150x150&format=Png&isCircular=false";
 
     try {
-      const res = await fetch(url);
-      if (res.ok) {
-        const payload = await res.json();
+      const response = await fetch(url);
+      if (response.ok) {
+        const payload = await response.json();
         for (const entry of payload.data || []) {
           if (entry.targetId && entry.imageUrl) {
             avatarCache.set(Number(entry.targetId), entry.imageUrl);
           }
         }
       }
-    } catch (err) {
-      console.error("Avatar fetch failed", err);
+    } catch (error) {
+      console.error("Avatar fetch failed", error);
     }
   }
 
@@ -84,171 +86,203 @@ async function populateAvatarUrls(rows) {
   });
 }
 
-// ─── RENDER ───────────────────────────────────────────────────
-function renderSkeleton() {
-  const body = document.getElementById('table-body');
-  if (!body) {
-    return;
+function Avatar({ player }) {
+  if (player.avatar_url) {
+    return html`<img className="avatar" src=${player.avatar_url} alt=${`${player.username} avatar`} loading="lazy" />`;
   }
-  body.innerHTML = Array.from({length: 5}, () => `
-    <div class="skeleton-row">
-      <div class="skel" style="width:32px;height:32px;border-radius:8px"></div>
-      <div class="skel" style="width:${100 + Math.random() * 80 | 0}px"></div>
-      <div class="skel" style="margin-left:auto;width:80px"></div>
-      <div class="skel" style="margin-left:auto;width:60px"></div>
-    </div>
-  `).join('');
+  return html`<div className="avatar-placeholder" aria-hidden="true"></div>`;
 }
 
-function renderError(msg) {
-  const body = document.getElementById('table-body');
-  if (!body) {
-    return;
-  }
-  body.innerHTML = `
-    <div class="state-box">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-      </svg>
-      <p>${msg}</p>
-    </div>
-  `;
+function SkeletonRows() {
+  const rows = Array.from({ length: 5 }, (_, index) => {
+    const widths = [160, 124, 180, 136, 154];
+    return html`
+      <div key=${index} className="skeleton-row">
+        <div className="skel" style=${{ width: "38px", height: "38px", borderRadius: "12px" }}></div>
+        <div className="skel" style=${{ width: `${widths[index]}px` }}></div>
+        <div className="skel" style=${{ marginLeft: "auto", width: "94px" }}></div>
+        <div className="skel" style=${{ marginLeft: "auto", width: "72px" }}></div>
+      </div>
+    `;
+  });
+
+  return html`${rows}`;
 }
 
-function renderEmpty() {
-  const body = document.getElementById('table-body');
-  if (!body) {
-    return;
-  }
-  body.innerHTML = `
-    <div class="state-box">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+function EmptyState() {
+  return html`
+    <div className="state-box">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+        <circle cx="9" cy="7" r="4"></circle>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
       </svg>
       <p>No players yet. Play the game to appear here!</p>
     </div>
   `;
 }
 
-function rankClass(i) {
-  if (i === 0) return 'rank-badge rank-1';
-  if (i === 1) return 'rank-badge rank-2';
-  if (i === 2) return 'rank-badge rank-3';
-  return 'rank-badge rank-other';
-}
-
-function rowClass(i) {
-  if (i === 0) return 'row row-1';
-  if (i === 1) return 'row row-2';
-  if (i === 2) return 'row row-3';
-  return 'row';
-}
-
-function avatarCellForPlayer(player) {
-  if (player.avatar_url) {
-    return `<img class="avatar" src="${escapeHtml(player.avatar_url)}" alt="${escapeHtml(player.username)} avatar" loading="lazy" />`;
-  }
-  return `<div class="avatar-placeholder" aria-hidden="true"></div>`;
-}
-
-function renderRows(data) {
-  if (!data || data.length === 0) { renderEmpty(); return; }
-
-  const body = document.getElementById('table-body');
-  if (!body) {
-    return;
-  }
-  body.innerHTML = data.map((p, i) => `
-    <div class="${rowClass(i)}" style="animation-delay:${i * 30}ms">
-      <div class="rank-cell">
-        <div class="${rankClass(i)}">${i + 1}</div>
-      </div>
-      <div class="player-cell">
-        ${avatarCellForPlayer(p)}
-        <span class="username">${escapeHtml(p.username)}</span>
-      </div>
-      <div class="stat-cell leaves">${EN.format(p.leaves)}</div>
-      <div class="stat-cell level">${Math.floor(Number(p.level) || 0)}</div>
+function ErrorState({ message }) {
+  return html`
+    <div className="state-box">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      <p>${message}</p>
     </div>
-  `).join('');
+  `;
 }
 
-function renderStats(data) {
-  const lastUpdated = data.reduce((latest, p) => {
-    if (!p.updated_at) return latest;
-    const d = new Date(p.updated_at);
-    return (!latest || d > latest) ? d : latest;
-  }, null);
-
-  const updatedEl = document.getElementById('stat-updated');
-  if (updatedEl) {
-    updatedEl.textContent = lastUpdated
-      ? lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      : '—';
+function LeaderboardRows({ data }) {
+  if (!data.length) {
+    return html`<${EmptyState} />`;
   }
+
+  return html`
+    ${data.map((player, index) => html`
+      <div key=${`${player.username}-${index}`} className=${rowClass(index)} style=${{ animationDelay: `${index * 30}ms` }}>
+        <div className="rank-cell">
+          <div className=${rankClass(index)}>${index + 1}</div>
+        </div>
+        <div className="player-cell">
+          <${Avatar} player=${player} />
+          <span className="username">${player.username}</span>
+        </div>
+        <div className="stat-cell leaves">${window.EN.format(player.leaves)}</div>
+        <div className="stat-cell level">${Math.floor(Number(player.level) || 0)}</div>
+      </div>
+    `)}
+  `;
 }
 
-// ─── MAIN LOAD ────────────────────────────────────────────────
-async function loadData() {
-  const btn  = document.getElementById('refresh-btn');
-  const icon = document.getElementById('refresh-icon');
+function App() {
+  const [sortBy, setSortBy] = useState("leaves");
+  const [rows, setRows] = useState([]);
+  const [status, setStatus] = useState("loading");
+  const [error, setError] = useState("");
+  const refreshTimerRef = useRef(null);
 
-  if (btn) {
-    btn.classList.add('spinning');
-  }
-  if (icon) {
-    icon.classList.add('spinning');
-  }
-  renderSkeleton();
+  async function loadData() {
+    setStatus((current) => (current === "ready" ? "refreshing" : "loading"));
+    setError("");
 
-  try {
-    const data = await populateAvatarUrls(await fetchLeaderboard());
-    allData = data;
-    renderRows(data);
-    renderStats(data);
-  } catch (err) {
-    console.error(err);
-    renderError(err.message);
-  } finally {
-    if (btn) {
-      btn.classList.remove('spinning');
+    try {
+      const data = await populateAvatarUrls(await fetchLeaderboard(sortBy));
+      setRows(data);
+      setStatus("ready");
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : String(err));
+      setStatus("error");
     }
-    if (icon) {
-      icon.classList.remove('spinning');
+  }
+
+  useEffect(() => {
+    loadData();
+  }, [sortBy]);
+
+  useEffect(() => {
+    const intervalMs = window.CONFIG?.AUTO_REFRESH_MS || 0;
+    if (intervalMs <= 0) {
+      return undefined;
     }
-  }
+
+    refreshTimerRef.current = window.setInterval(() => {
+      loadData();
+    }, intervalMs);
+
+    return () => {
+      if (refreshTimerRef.current) {
+        window.clearInterval(refreshTimerRef.current);
+      }
+    };
+  }, [sortBy]);
+
+  const lastUpdated = useMemo(() => {
+    const latest = rows.reduce((current, row) => {
+      if (!row.updated_at) {
+        return current;
+      }
+      const date = new Date(row.updated_at);
+      return !current || date > current ? date : current;
+    }, null);
+
+    return latest
+      ? latest.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      : "—";
+  }, [rows]);
+
+  const isLoading = status === "loading" || status === "refreshing";
+
+  return html`
+    <div>
+      <div className="cloud cloud-a"></div>
+      <div className="cloud cloud-b"></div>
+      <div className="cloud cloud-c"></div>
+      <div className="cloud cloud-d"></div>
+      <div className="cloud cloud-e"></div>
+      <div className="leaf-float leaf-a">🍃</div>
+      <div className="leaf-float leaf-b">🍂</div>
+      <div className="leaf-float leaf-c">🍃</div>
+      <div className="leaf-float leaf-d">🍂</div>
+      <div className="leaf-float leaf-e">🍃</div>
+      <div className="leaf-float leaf-f">🍂</div>
+      <div className="leaf-float leaf-g">🍃</div>
+
+      <div className="wrapper">
+        <header className="hero">
+          <h1>Top Leaf Blowers</h1>
+          <p className="subtitle">
+            The best players in
+            <a href="https://www.roblox.com/games/10587359941/Leaf-Blowing-Simulator" target="_blank" rel="noopener noreferrer"> LBS</a>,
+            ranked by <span>Leaves</span> and <span>Level</span>.
+          </p>
+        </header>
+
+        <div className="stats-row" id="stats-row">
+          <div className="stat-card">
+            <div className="stat-label">Last Refreshed</div>
+            <div className="stat-value" style=${{ fontSize: "18px", paddingTop: "6px" }} id="stat-updated">${lastUpdated}</div>
+          </div>
+        </div>
+
+        <div className="controls">
+          <span className="sort-label">Sort By</span>
+          <button className=${`sort-btn ${sortBy === "leaves" ? "active" : ""}`} onClick=${() => setSortBy("leaves")}>Leaves</button>
+          <button className=${`sort-btn ${sortBy === "level" ? "active" : ""}`} onClick=${() => setSortBy("level")}>Level</button>
+          <div className="spacer"></div>
+          <button className="refresh-btn" onClick=${loadData} disabled=${isLoading}>
+            <svg className=${isLoading ? "spinning" : ""} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 2v6h-6"></path>
+              <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+              <path d="M3 22v-6h6"></path>
+              <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+            </svg>
+            Refresh Board
+          </button>
+        </div>
+
+        <div className="table-wrap">
+          <div className="table-head">
+            <div className="th">#</div>
+            <div className="th">Player</div>
+            <div className="th right">Leaves</div>
+            <div className="th right">Level</div>
+          </div>
+          <div id="table-body">
+            ${status === "error"
+              ? html`<${ErrorState} message=${error} />`
+              : isLoading && rows.length === 0
+                ? html`<${SkeletonRows} />`
+                : html`<${LeaderboardRows} data=${rows} />`}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
-// ─── SORT ────────────────────────────────────────────────────
-function setSort(col) {
-  sortBy = col;
-  const sortLeaves = document.getElementById('sort-leaves');
-  const sortLevel = document.getElementById('sort-level');
-  if (sortLeaves) {
-    sortLeaves.classList.toggle('active', col === 'leaves');
-  }
-  if (sortLevel) {
-    sortLevel.classList.toggle('active', col === 'level');
-  }
-  loadData();
-}
-
-// ─── UTILS ───────────────────────────────────────────────────
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-// ─── INIT ─────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  loadData();
-
-  // Auto-refresh
-  if (CONFIG.AUTO_REFRESH_MS > 0) {
-    setInterval(loadData, CONFIG.AUTO_REFRESH_MS);
-  }
-});
+createRoot(document.getElementById("root")).render(html`<${App} />`);

@@ -1,20 +1,3 @@
-/**
- * eternitynum.js
- * ─────────────────────────────────────────────────────────────
- * Formats large numbers using the EternityNum suffix system,
- * matching the Roblox EternityNum library up to MeHect.
- *
- * Suffix tiers:
- *   Standard: K, M, B, T, Qa, Qi, Sx, Sp, Oc, No
- *   -illion:  De, UnDe, DuDe, ... NoDe
- *   -illard:  Ce, UnCe, ... NoCe
- *   Higher:   Mill, BiMill, TriMill, ... (and so on)
- *   Special:  Hect, Bi+Hect, ..., MeHect (mega hect)
- *
- * This implementation covers the full EternityNum range as used
- * in Roblox games up to MeHect (10^309).
- */
-
 (function (global) {
   'use strict';
 
