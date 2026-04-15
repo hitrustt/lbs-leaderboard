@@ -11,6 +11,7 @@
 let sortBy   = 'leaves';  // 'leaves' | 'level'
 let allData  = [];
 let refreshTimer = null;
+const avatarCache = new Map();
 
 // ─── SUPABASE FETCH ───────────────────────────────────────────
 async function fetchLeaderboard() {
@@ -46,6 +47,41 @@ async function fetchLeaderboard() {
     userid: row.userid != null ? Number(row.userid) : null,
     avatar_url: row.avatar_url || null,
   }));
+}
+
+async function populateAvatarUrls(rows) {
+  const missingUserIds = rows
+    .map((row) => row.userid)
+    .filter((userId) => userId != null && !avatarCache.has(userId));
+
+  if (missingUserIds.length > 0) {
+    const uniqueUserIds = [...new Set(missingUserIds)];
+    const url = "https://thumbnails.roproxy.com/v1/users/avatar-headshot"
+      + `?userIds=${uniqueUserIds.join(",")}`
+      + "&size=150x150&format=Png&isCircular=false";
+
+    try {
+      const res = await fetch(url);
+      if (res.ok) {
+        const payload = await res.json();
+        for (const entry of payload.data || []) {
+          if (entry.targetId && entry.imageUrl) {
+            avatarCache.set(Number(entry.targetId), entry.imageUrl);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Avatar fetch failed", err);
+    }
+  }
+
+  return rows.map((row) => {
+    const resolvedAvatarUrl = row.userid != null ? (avatarCache.get(row.userid) || null) : null;
+    return {
+      ...row,
+      avatar_url: resolvedAvatarUrl || (row.avatar_url && !row.avatar_url.startsWith("rbxthumb://") ? row.avatar_url : null),
+    };
+  });
 }
 
 // ─── RENDER ───────────────────────────────────────────────────
@@ -179,7 +215,7 @@ async function loadData() {
   renderSkeleton();
 
   try {
-    const data = await fetchLeaderboard();
+    const data = await populateAvatarUrls(await fetchLeaderboard());
     allData = data;
     renderRows(data);
     renderStats(data);
