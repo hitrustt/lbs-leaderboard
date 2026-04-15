@@ -51,6 +51,9 @@ async function fetchLeaderboard() {
 // ─── RENDER ───────────────────────────────────────────────────
 function renderSkeleton() {
   const body = document.getElementById('table-body');
+  if (!body) {
+    return;
+  }
   body.innerHTML = Array.from({length: 5}, () => `
     <div class="skeleton-row">
       <div class="skel" style="width:32px;height:32px;border-radius:8px"></div>
@@ -62,7 +65,11 @@ function renderSkeleton() {
 }
 
 function renderError(msg) {
-  document.getElementById('table-body').innerHTML = `
+  const body = document.getElementById('table-body');
+  if (!body) {
+    return;
+  }
+  body.innerHTML = `
     <div class="state-box">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
@@ -73,7 +80,11 @@ function renderError(msg) {
 }
 
 function renderEmpty() {
-  document.getElementById('table-body').innerHTML = `
+  const body = document.getElementById('table-body');
+  if (!body) {
+    return;
+  }
+  body.innerHTML = `
     <div class="state-box">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
@@ -109,6 +120,9 @@ function renderRows(data) {
   if (!data || data.length === 0) { renderEmpty(); return; }
 
   const body = document.getElementById('table-body');
+  if (!body) {
+    return;
+  }
   body.innerHTML = data.map((p, i) => `
     <div class="${rowClass(i)}" style="animation-delay:${i * 30}ms">
       <div class="rank-cell">
@@ -156,8 +170,12 @@ async function loadData() {
   const btn  = document.getElementById('refresh-btn');
   const icon = document.getElementById('refresh-icon');
 
-  btn.classList.add('spinning');
-  icon.classList.add('spinning');
+  if (btn) {
+    btn.classList.add('spinning');
+  }
+  if (icon) {
+    icon.classList.add('spinning');
+  }
   renderSkeleton();
 
   try {
@@ -169,16 +187,26 @@ async function loadData() {
     console.error(err);
     renderError(err.message);
   } finally {
-    btn.classList.remove('spinning');
-    icon.classList.remove('spinning');
+    if (btn) {
+      btn.classList.remove('spinning');
+    }
+    if (icon) {
+      icon.classList.remove('spinning');
+    }
   }
 }
 
 // ─── SORT ────────────────────────────────────────────────────
 function setSort(col) {
   sortBy = col;
-  document.getElementById('sort-leaves').classList.toggle('active', col === 'leaves');
-  document.getElementById('sort-level').classList.toggle('active', col === 'level');
+  const sortLeaves = document.getElementById('sort-leaves');
+  const sortLevel = document.getElementById('sort-level');
+  if (sortLeaves) {
+    sortLeaves.classList.toggle('active', col === 'leaves');
+  }
+  if (sortLevel) {
+    sortLevel.classList.toggle('active', col === 'level');
+  }
   loadData();
 }
 
