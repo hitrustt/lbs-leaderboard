@@ -162,7 +162,7 @@
 
     .stats-row {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: minmax(0, 1fr);
       gap: 16px;
       margin-bottom: 22px;
     }
@@ -551,14 +551,6 @@
     </header>
 
     <div class="stats-row" id="stats-row">
-      <div class="stat-card">
-        <div class="stat-label">Highest Level</div>
-        <div class="stat-value" id="stat-top-level">-</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Best Leaf Count</div>
-        <div class="stat-value compact" id="stat-top-leaves">-</div>
-      </div>
       <div class="stat-card">
         <div class="stat-label">Last Refreshed</div>
         <div class="stat-value" style="font-size:18px;padding-top:6px" id="stat-updated">-</div>

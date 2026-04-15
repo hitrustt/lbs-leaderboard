@@ -175,18 +175,6 @@ function renderRows(data) {
 }
 
 function renderStats(data) {
-  const topLeaves = data.reduce((max, p) => Math.max(max, Number(p.leaves) || 0), 0);
-  const topLeavesEl = document.getElementById('stat-top-leaves');
-  if (topLeavesEl) {
-    topLeavesEl.textContent = EN.format(topLeaves);
-  }
-
-  const topLevel = data.reduce((max, p) => Math.max(max, Number(p.level) || 0), 0);
-  const topLevelEl = document.getElementById('stat-top-level');
-  if (topLevelEl) {
-    topLevelEl.textContent = Math.floor(topLevel);
-  }
-
   const lastUpdated = data.reduce((latest, p) => {
     if (!p.updated_at) return latest;
     const d = new Date(p.updated_at);
