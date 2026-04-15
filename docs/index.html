@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leaderboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ─── THEME ─────────────────────────────────────── */
+    :root {
+      --bg:        #0a0c10;
+      --bg2:       #111420;
+      --bg3:       #181d2a;
+      --border:    rgba(255,255,255,0.07);
+      --border2:   rgba(255,255,255,0.13);
+      --text:      #e8eaf2;
+      --muted:     #6b7280;
+      --accent:    #4ade80;
+      --accent2:   #22d3ee;
+      --gold:      #fbbf24;
+      --silver:    #94a3b8;
+      --bronze:    #c2855a;
+      --rank1:     linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #f59e0b 100%);
+      --rank2:     linear-gradient(135deg, #64748b 0%, #94a3b8 50%, #64748b 100%);
+      --rank3:     linear-gradient(135deg, #7c4d2a 0%, #c2855a 50%, #7c4d2a 100%);
+      --font:      'Syne', sans-serif;
+      --mono:      'DM Mono', monospace;
+      --radius:    12px;
+      --glow:      0 0 40px rgba(74,222,128,0.08);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ─── BACKGROUND ────────────────────────────────── */
+    .bg-grid {
+      position: fixed; inset: 0; z-index: 0;
+      background-image:
+        linear-gradient(rgba(74,222,128,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(74,222,128,0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+    }
+    .bg-glow {
+      position: fixed; z-index: 0; pointer-events: none;
+      border-radius: 50%; filter: blur(80px); opacity: 0.18;
+    }
+    .bg-glow-1 { width: 600px; height: 600px; background: #4ade80; top: -200px; left: -100px; }
+    .bg-glow-2 { width: 500px; height: 500px; background: #22d3ee; bottom: -200px; right: -100px; }
+
+    /* ─── LAYOUT ────────────────────────────────────── */
+    .wrapper {
+      position: relative; z-index: 1;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 20px 80px;
+    }
+
+    /* ─── HEADER ────────────────────────────────────── */
+    header {
+      padding: 56px 0 40px;
+      text-align: center;
+    }
+    .game-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: 999px;
+      padding: 6px 16px;
+      font-size: 12px; font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+    .game-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+    h1 {
+      font-size: clamp(36px, 6vw, 64px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1;
+      background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      margin-bottom: 12px;
+    }
+    .subtitle {
+      font-size: 14px;
+      color: var(--muted);
+      letter-spacing: 0.03em;
+    }
+    .subtitle span { color: var(--accent); font-weight: 600; }
+
+    /* ─── STATS ROW ─────────────────────────────────── */
+    .stats-row {
+      display: flex; gap: 12px; margin-bottom: 32px;
+      flex-wrap: wrap;
+    }
+    .stat-card {
+      flex: 1; min-width: 140px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+    }
+    .stat-label {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+    }
+    .stat-value {
+      font-family: var(--mono);
+      font-size: 22px; font-weight: 500;
+      color: var(--accent);
+    }
+
+    /* ─── CONTROLS ──────────────────────────────────── */
+    .controls {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .sort-label {
+      font-size: 12px; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--muted);
+      margin-right: 4px;
+    }
+    .sort-btn {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 16px;
+      color: var(--muted);
+      font-family: var(--font);
+      font-size: 13px; font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .sort-btn:hover { border-color: var(--border2); color: var(--text); }
+    .sort-btn.active {
+      background: rgba(74,222,128,0.1);
+      border-color: rgba(74,222,128,0.35);
+      color: var(--accent);
+    }
+    .spacer { flex: 1; }
+    .refresh-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 14px;
+      color: var(--muted);
+      font-family: var(--font);
+      font-size: 12px; font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .refresh-btn:hover { border-color: var(--border2); color: var(--text); }
+    .refresh-btn svg { transition: transform 0.4s; }
+    .refresh-btn.spinning svg { animation: spin 0.6s linear; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── TABLE ─────────────────────────────────────── */
+    .table-wrap {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .table-head {
+      display: grid;
+      grid-template-columns: 64px 1fr 180px 160px;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg3);
+    }
+    .th {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .th.right { text-align: right; }
+
+    .row {
+      display: grid;
+      grid-template-columns: 64px 1fr 180px 160px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      align-items: center;
+      transition: background 0.12s;
+      animation: row-in 0.3s ease both;
+    }
+    .row:last-child { border-bottom: none; }
+    .row:hover { background: rgba(255,255,255,0.025); }
+    @keyframes row-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── RANK ──────────────────────────────────────── */
+    .rank-cell { display: flex; align-items: center; }
+    .rank-badge {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 800; font-family: var(--mono);
+      color: #0a0c10;
+    }
+    .rank-1 { background: var(--rank1); box-shadow: 0 0 16px rgba(251,191,36,0.4); }
+    .rank-2 { background: var(--rank2); }
+    .rank-3 { background: var(--rank3); }
+    .rank-other {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    /* ─── PLAYER ────────────────────────────────────── */
+    .player-cell { display: flex; align-items: center; gap: 12px; }
+    .avatar {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .avatar-placeholder {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700;
+      color: var(--muted);
+      flex-shrink: 0;
+      text-transform: uppercase;
+    }
+    .username {
+      font-size: 15px; font-weight: 700;
+      color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .row-1 .username { color: var(--gold); }
+    .row-2 .username { color: var(--silver); }
+    .row-3 .username { color: var(--bronze); }
+
+    /* ─── STAT CELLS ─────────────────────────────────── */
+    .stat-cell {
+      font-family: var(--mono);
+      font-size: 14px;
+      text-align: right;
+      color: var(--accent);
+    }
+    .stat-cell.leaves { color: var(--accent); }
+    .stat-cell.level  { color: var(--accent2); }
+
+    /* ─── LOADING / EMPTY ───────────────────────────── */
+    .state-box {
+      padding: 64px 20px;
+      text-align: center;
+      color: var(--muted);
+    }
+    .state-box svg { margin-bottom: 16px; opacity: 0.4; }
+    .state-box p { font-size: 14px; margin-top: 8px; }
+
+    .skeleton-row {
+      display: grid;
+      grid-template-columns: 64px 1fr 180px 160px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+      align-items: center;
+    }
+    .skeleton-row:last-child { border-bottom: none; }
+    .skel {
+      background: var(--bg3);
+      border-radius: 6px;
+      height: 20px;
+      animation: shimmer 1.4s ease-in-out infinite;
+    }
+    @keyframes shimmer {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 0.8; }
+    }
+
+    /* ─── FOOTER ─────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding-top: 32px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--text); }
+
+    /* ─── MOBILE ─────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .table-head,
+      .row,
+      .skeleton-row {
+        grid-template-columns: 48px 1fr 110px;
+      }
+      .th:last-child, .stat-cell.level, .skeleton-row div:last-child { display: none; }
+      h1 { font-size: 36px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+
+  <div class="wrapper">
+    <header>
+      <div class="game-badge">Roblox Game</div>
+      <h1>Leaderboard</h1>
+      <p class="subtitle">Top players ranked by <span>Leaves</span> &amp; <span>Level</span></p>
+    </header>
+
+    <div class="stats-row" id="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Players</div>
+        <div class="stat-value" id="stat-players">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Top Leaves</div>
+        <div class="stat-value" id="stat-top-leaves">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Last Updated</div>
+        <div class="stat-value" style="font-size:14px;padding-top:4px" id="stat-updated">—</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <span class="sort-label">Sort by</span>
+      <button class="sort-btn active" id="sort-leaves" onclick="setSort('leaves')">Leaves</button>
+      <button class="sort-btn" id="sort-level" onclick="setSort('level')">Level</button>
+      <div class="spacer"></div>
+      <button class="refresh-btn" id="refresh-btn" onclick="loadData()">
+        <svg id="refresh-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+          <path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+        </svg>
+        Refresh
+      </button>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-head">
+        <div class="th">#</div>
+        <div class="th">Player</div>
+        <div class="th right">Leaves</div>
+        <div class="th right">Level</div>
+      </div>
+      <div id="table-body">
+        <!-- skeleton while loading -->
+        <div class="skeleton-row"><div class="skel" style="width:32px;height:32px;border-radius:8px"></div><div class="skel" style="width:140px"></div><div class="skel" style="margin-left:auto;width:80px"></div><div class="skel" style="margin-left:auto;width:60px"></div></div>
+        <div class="skeleton-row"><div class="skel" style="width:32px;height:32px;border-radius:8px"></div><div class="skel" style="width:110px"></div><div class="skel" style="margin-left:auto;width:80px"></div><div class="skel" style="margin-left:auto;width:60px"></div></div>
+        <div class="skeleton-row"><div class="skel" style="width:32px;height:32px;border-radius:8px"></div><div class="skel" style="width:160px"></div><div class="skel" style="margin-left:auto;width:80px"></div><div class="skel" style="margin-left:auto;width:60px"></div></div>
+        <div class="skeleton-row"><div class="skel" style="width:32px;height:32px;border-radius:8px"></div><div class="skel" style="width:130px"></div><div class="skel" style="margin-left:auto;width:80px"></div><div class="skel" style="margin-left:auto;width:60px"></div></div>
+        <div class="skeleton-row"><div class="skel" style="width:32px;height:32px;border-radius:8px"></div><div class="skel" style="width:120px"></div><div class="skel" style="margin-left:auto;width:80px"></div><div class="skel" style="margin-left:auto;width:60px"></div></div>
+      </div>
+    </div>
+
+    <footer>
+      <p>Built by <a href="https://linkedin.com/in/claudeluke" target="_blank">Claude Luke</a> · Powered by Supabase · Open source on <a href="https://github.com/claudeluke1" target="_blank">GitHub</a></p>
+    </footer>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="eternitynum.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
