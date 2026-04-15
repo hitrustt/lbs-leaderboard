@@ -24,7 +24,7 @@ async function fetchLeaderboard() {
   // The table is "leaderboard" with columns: username, leaves, level, updated_at
   const col   = sortBy === 'level' ? 'level' : 'leaves';
   const url   = `${SUPABASE_URL}/rest/v1/leaderboard`
-              + `?select=username,leaves,level,updated_at`
+              + `?select=userid,username,avatar_url,leaves,level,updated_at`
               + `&order=${col}.desc`
               + `&limit=${LIMIT}`;
 
@@ -40,7 +40,12 @@ async function fetchLeaderboard() {
     throw new Error(`Supabase error ${res.status}: ${err}`);
   }
 
-  return res.json();
+  const data = await res.json();
+  return data.map((row) => ({
+    ...row,
+    userid: row.userid != null ? Number(row.userid) : null,
+    avatar_url: row.avatar_url || null,
+  }));
 }
 
 // ─── RENDER ───────────────────────────────────────────────────
@@ -93,9 +98,11 @@ function rowClass(i) {
   return 'row';
 }
 
-function avatarCell(username) {
-  const initials = username.slice(0, 2).toUpperCase();
-  return `<div class="avatar-placeholder">${initials}</div>`;
+function avatarCellForPlayer(player) {
+  if (player.avatar_url) {
+    return `<img class="avatar" src="${escapeHtml(player.avatar_url)}" alt="${escapeHtml(player.username)} avatar" loading="lazy" />`;
+  }
+  return `<div class="avatar-placeholder" aria-hidden="true"></div>`;
 }
 
 function renderRows(data) {
@@ -108,20 +115,21 @@ function renderRows(data) {
         <div class="${rankClass(i)}">${i + 1}</div>
       </div>
       <div class="player-cell">
-        ${avatarCell(p.username)}
+        ${avatarCellForPlayer(p)}
         <span class="username">${escapeHtml(p.username)}</span>
       </div>
       <div class="stat-cell leaves">${EN.format(p.leaves)}</div>
-      <div class="stat-cell level">${EN.format(p.level)}</div>
+      <div class="stat-cell level">${Math.floor(Number(p.level) || 0)}</div>
     </div>
   `).join('');
 }
 
 function renderStats(data) {
-  document.getElementById('stat-players').textContent = data.length;
-
-  const topLeaves = data.reduce((max, p) => Math.max(max, p.leaves), 0);
+  const topLeaves = data.reduce((max, p) => Math.max(max, Number(p.leaves) || 0), 0);
   document.getElementById('stat-top-leaves').textContent = EN.format(topLeaves);
+
+  const topLevel = data.reduce((max, p) => Math.max(max, Number(p.level) || 0), 0);
+  document.getElementById('stat-top-level').textContent = Math.floor(topLevel);
 
   const lastUpdated = data.reduce((latest, p) => {
     if (!p.updated_at) return latest;
@@ -181,11 +189,5 @@ document.addEventListener('DOMContentLoaded', () => {
   // Auto-refresh
   if (CONFIG.AUTO_REFRESH_MS > 0) {
     setInterval(loadData, CONFIG.AUTO_REFRESH_MS);
-  }
-
-  // Update game badge name
-  const badge = document.querySelector('.game-badge');
-  if (badge && CONFIG.GAME_NAME) {
-    badge.textContent = CONFIG.GAME_NAME;
   }
 });
