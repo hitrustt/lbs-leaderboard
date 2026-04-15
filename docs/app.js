@@ -126,10 +126,16 @@ function renderRows(data) {
 
 function renderStats(data) {
   const topLeaves = data.reduce((max, p) => Math.max(max, Number(p.leaves) || 0), 0);
-  document.getElementById('stat-top-leaves').textContent = EN.format(topLeaves);
+  const topLeavesEl = document.getElementById('stat-top-leaves');
+  if (topLeavesEl) {
+    topLeavesEl.textContent = EN.format(topLeaves);
+  }
 
   const topLevel = data.reduce((max, p) => Math.max(max, Number(p.level) || 0), 0);
-  document.getElementById('stat-top-level').textContent = Math.floor(topLevel);
+  const topLevelEl = document.getElementById('stat-top-level');
+  if (topLevelEl) {
+    topLevelEl.textContent = Math.floor(topLevel);
+  }
 
   const lastUpdated = data.reduce((latest, p) => {
     if (!p.updated_at) return latest;
@@ -137,9 +143,12 @@ function renderStats(data) {
     return (!latest || d > latest) ? d : latest;
   }, null);
 
-  document.getElementById('stat-updated').textContent = lastUpdated
-    ? lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : '—';
+  const updatedEl = document.getElementById('stat-updated');
+  if (updatedEl) {
+    updatedEl.textContent = lastUpdated
+      ? lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : '—';
+  }
 }
 
 // ─── MAIN LOAD ────────────────────────────────────────────────
