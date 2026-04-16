@@ -1,9 +1,22 @@
-import React, { useEffect, useMemo, useRef, useState } from "https://esm.sh/react@18.3.1";
+import React, { useEffect, useRef, useState } from "https://esm.sh/react@18.3.1";
 import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
 import htm from "https://esm.sh/htm@3.1.1";
 
 const html = htm.bind(React.createElement);
 const avatarCache = new Map();
+
+function formatVisitCount(count) {
+  if (!Number.isFinite(count)) {
+    return "Unavailable";
+  }
+
+  const formatter = new Intl.NumberFormat("en-US", {
+    notation: count >= 1000000 ? "compact" : "standard",
+    maximumFractionDigits: count >= 1000000 ? 1 : 0,
+  });
+
+  return formatter.format(count);
+}
 
 function rankClass(index) {
   if (index === 0) return "rank-badge rank-1";
@@ -49,6 +62,38 @@ async function fetchLeaderboard(sortBy) {
     userid: row.userid != null ? Number(row.userid) : null,
     avatar_url: row.avatar_url || null,
   }));
+}
+
+async function fetchVisitCount() {
+  const { GAME_PLACE_ID } = window.CONFIG || {};
+
+  if (!GAME_PLACE_ID) {
+    throw new Error("Missing GAME_PLACE_ID in config.js.");
+  }
+
+  const universeResponse = await fetch(`https://apis.roproxy.com/universes/v1/places/${GAME_PLACE_ID}/universe`);
+  if (!universeResponse.ok) {
+    throw new Error(`Universe lookup failed with status ${universeResponse.status}.`);
+  }
+
+  const universePayload = await universeResponse.json();
+  const universeId = universePayload?.universeId;
+  if (!universeId) {
+    throw new Error("Universe lookup did not return a universeId.");
+  }
+
+  const gameResponse = await fetch(`https://games.roproxy.com/v1/games?universeIds=${universeId}`);
+  if (!gameResponse.ok) {
+    throw new Error(`Visits lookup failed with status ${gameResponse.status}.`);
+  }
+
+  const gamePayload = await gameResponse.json();
+  const visits = Number(gamePayload?.data?.[0]?.visits);
+  if (!Number.isFinite(visits)) {
+    throw new Error("Visits lookup did not return a valid count.");
+  }
+
+  return visits;
 }
 
 async function populateAvatarUrls(rows) {
@@ -161,6 +206,7 @@ function LeaderboardRows({ data }) {
 function App() {
   const [sortBy, setSortBy] = useState("leaves");
   const [rows, setRows] = useState([]);
+  const [visitCount, setVisitCount] = useState(null);
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
   const refreshTimerRef = useRef(null);
@@ -170,8 +216,17 @@ function App() {
     setError("");
 
     try {
-      const data = await populateAvatarUrls(await fetchLeaderboard(sortBy));
+      const leaderboardPromise = fetchLeaderboard(sortBy).then(populateAvatarUrls);
+      const visitsPromise = fetchVisitCount().catch((visitError) => {
+        console.error("Visit count fetch failed", visitError);
+        return null;
+      });
+      const [data, visits] = await Promise.all([leaderboardPromise, visitsPromise]);
+
       setRows(data);
+      if (visits != null) {
+        setVisitCount(visits);
+      }
       setStatus("ready");
     } catch (err) {
       console.error(err);
@@ -201,21 +256,11 @@ function App() {
     };
   }, [sortBy]);
 
-  const lastUpdated = useMemo(() => {
-    const latest = rows.reduce((current, row) => {
-      if (!row.updated_at) {
-        return current;
-      }
-      const date = new Date(row.updated_at);
-      return !current || date > current ? date : current;
-    }, null);
-
-    return latest
-      ? latest.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-      : "—";
-  }, [rows]);
-
   const isLoading = status === "loading" || status === "refreshing";
+  const gameUrl = `https://www.roblox.com/games/${window.CONFIG?.GAME_PLACE_ID || ""}/Leaf-Blowing-Simulator`;
+  const visitCountLabel = visitCount == null
+    ? (status === "loading" ? "Loading..." : "Unavailable")
+    : `Over ${formatVisitCount(visitCount)} Players`;
 
   return html`
     <div>
@@ -236,16 +281,16 @@ function App() {
         <header className="hero">
           <h1>Top Leaf Blowers</h1>
           <p className="subtitle">
-            The best players in
-            <a href="https://www.roblox.com/games/10587359941/Leaf-Blowing-Simulator" target="_blank" rel="noopener noreferrer"> LBS</a>,
+            The top 50 players in
+            <a href=${gameUrl} target="_blank" rel="noopener noreferrer"> LBS</a>,
             ranked by <span>Leaves</span> and <span>Level</span>.
           </p>
         </header>
 
         <div className="stats-row" id="stats-row">
-          <div className="stat-card">
-            <div className="stat-label">Last Refreshed</div>
-            <div className="stat-value" style=${{ fontSize: "18px", paddingTop: "6px" }} id="stat-updated">${lastUpdated}</div>
+          <div className="stat-card" title="Based on Roblox visit count for this experience.">
+            <div className="stat-label">Played By</div>
+            <div className="stat-value compact">${visitCountLabel}</div>
           </div>
         </div>
 

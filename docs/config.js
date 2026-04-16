@@ -5,6 +5,7 @@ const CONFIG = {
   LIMIT: 50,
 
   GAME_NAME: 'LBS',
+  GAME_PLACE_ID: 10587359941,
 
   AUTO_REFRESH_MS: 60000, // 60 seconds
 };
